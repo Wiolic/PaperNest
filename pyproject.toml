@@ -19,6 +19,7 @@ dependencies = [
     "uvicorn",
     "filelock",
     "keyring",
+    "numpy>=2.4.6",
 ]
 
 [project.optional-dependencies]

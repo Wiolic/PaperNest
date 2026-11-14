@@ -51,7 +51,7 @@
 25. **表征方法归一化**：前缀匹配容忍 `in-situ`、`insitu`、`In Situ`（LEGACY 第 5 节新发现项）；只有前缀没有技术名时不当作前缀；读入时顺手去掉旧库遗留的 `unmapped:` 前缀；中文前缀"原位/工况下/非原位"（LEGACY R07）规格未要求，未做。
 26. **词表类 `save()` 只写 tags/journals/characterization 三个文件**，不碰 `discovery.yaml`；输出为块式映射 + 行内标量列表，样例库词表即由它生成，测试断言往返字节不变。词表里出现未知键即报错（与笔记一致 extra=forbid）。
 27. **textsim**：`normalize_title` 额外去 HTML 标签与实体、做 NFKC，标点一律视作空白；`normalize_filename` 切词用 `[\W_]+` 而非 LEGACY 的 `[^a-z0-9]+`（后者会把中文文件名切光）；缺失 DOI/标题占位集合（R05）放在 `textsim`，提供 `is_missing_doi/is_missing_title`。`models.normalize_doi` 不处理占位值（"N/A" 仍是字符串），迁移与入库层需先过 `is_missing_doi`。归一化后为空的标题不参与相似度（返回 0 / 不进配对）。
-28. **`find_similar_titles` 未用 `cdist`**：环境没有 numpy，而 `cdist` 依赖它；改为按长度排序 + 长度窗口 + `process.extract(score_cutoff)`，结果与暴力比较一致（有对拍测试）。1 万条约 2–3 秒。
+28. **`find_similar_titles` 用 `cdist`**：起初环境没有 numpy，用过长度窗口 + `process.extract` 的写法（1 万条约 2.5 秒）；用户要求装 numpy 后改回 `cdist` 分块 + 多线程（约 1.2 秒），`pyproject.toml` 新增依赖 `numpy`（PyInstaller 打包体积会增大，阶段 11 留意）。有与暴力比较对拍的测试。
 29. **citekey**：`build` 的期刊缩写为空时按 DATA_MODEL 写 `unknown`（LEGACY R03 写的是 `Journal`，两者冲突，取 DATA_MODEL）；`condense_words` 的 `preserve` 缺省为空，另提供 `DEFAULT_PRESERVE`（取自 R03 点名的元素与缩写）供调用方选用，是否写死不由 core 决定；词内连字符与标点当作分隔。
 30. **index 的小决定**：
     - `SearchQuery` 新增 `include_fulltext`（默认 False，text 只搜笔记 FTS）；规格提到"全文可在配置中关闭"，但 `LibraryConfig` 没有该开关，故 `text/` 一律索引。
@@ -77,7 +77,7 @@
 
 踩坑：
 
-- 环境没有 numpy，`rapidfuzz.process.cdist` 不可用，见待决定第 28 条。
+- 环境原先没有 numpy，`rapidfuzz.process.cdist` 不可用，后来按用户要求装上，见待决定第 28 条。
 - SQLite 的 `bm25()` 只能在直接查询 FTS 表的语句里用，放进带 JOIN 的子查询会报"unable to use function bm25"；要用 `AS MATERIALIZED` 的 CTE 单独取分。
 - 仓库有保存即格式化的钩子，Write 之后文件内容会被 ruff 改写，再 Edit 前要重新读。
 - CI 跑 Python 3.11：不要用 PEP 695 的 `def f[T]()` 泛型语法。

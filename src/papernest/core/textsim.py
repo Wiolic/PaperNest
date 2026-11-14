@@ -6,6 +6,7 @@ import html
 import re
 import unicodedata
 
+import numpy as np
 from rapidfuzz import fuzz, process
 
 # LEGACY_MAP R05：缺失值占位集合，全系统只在这里定义一份（小写比较）
@@ -22,6 +23,7 @@ SI_MARKERS = frozenset(
 )
 SI_TOKEN_RE = re.compile(r"^(?:mmc\d+|moesm\d+)$")
 
+_CHUNK = 500
 _TAG_RE = re.compile(r"</?[A-Za-z][^<>]*>")
 _NON_WORD_RE = re.compile(r"[\W_]+")
 
@@ -68,37 +70,27 @@ def find_similar_titles(
 ) -> list[tuple[str, str, float]]:
     """返回相似度 ≥ threshold 的成对条目 (key_a, key_b, 相似度)，a 在输入中先于 b。
 
-    按分数降序、再按键排序。ratio ≥ t 要求较短串长度 ≥ t/(2-t) 倍较长串，
-    先按长度排序后只与长度窗口内的串比较，1 万条规模在秒级。
+    按分数降序、再按键排序。用 `cdist` 分块（每块 500 行对全部）多线程比较，
+    1 万条规模约 1 秒；分块是为了把内存压在几十 MB。
     """
     entries = [(key, normalize_title(title)) for key, title in items]
-    order = sorted((i for i, (_, n) in enumerate(entries) if n), key=lambda i: len(entries[i][1]))
-    if len(order) < 2:
+    idx = [i for i, (_, n) in enumerate(entries) if n]
+    norms = [entries[i][1] for i in idx]
+    if len(norms) < 2:
         return []
-    norms = [entries[i][1] for i in order]
-    lens = [len(n) for n in norms]
-    cutoff = threshold * 100
-    ratio = threshold / (2 - threshold) if threshold < 2 else 1.0
     out: list[tuple[int, int, float]] = []
-    hi = 0
-    for pos, norm in enumerate(norms):
-        # 只看比它长（排序靠后）且长度在窗口内的串，保证每对只比一次
-        limit = lens[pos] / ratio if ratio > 0 else float("inf")
-        while hi < len(norms) and lens[hi] <= limit:
-            hi += 1
-        start = pos + 1
-        if start >= hi:
-            continue
-        for _choice, score, idx in process.extract(
-            norm,
-            norms[start:hi],
+    for start in range(0, len(norms), _CHUNK):
+        block = process.cdist(
+            norms[start : start + _CHUNK],
+            norms,
             scorer=fuzz.ratio,
-            score_cutoff=cutoff,
-            limit=None,
-        ):
-            a, b = order[pos], order[start + idx]
-            if a > b:
-                a, b = b, a
-            out.append((a, b, float(score) / 100))
+            score_cutoff=threshold * 100,
+            dtype=np.float32,
+            workers=-1,
+        )
+        rows, cols = np.nonzero(block)
+        for r, c in zip(rows.tolist(), cols.tolist(), strict=True):
+            if start + r < c:  # 只取上三角，每对一次
+                out.append((idx[start + r], idx[c], float(block[r, c]) / 100))
     out.sort(key=lambda t: (-t[2], t[0], t[1]))
-    return [(entries[a][0], entries[b][0], s) for a, b, s in out]
+    return [(entries[a][0], entries[b][0], sc) for a, b, sc in out]
