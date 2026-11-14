@@ -4,20 +4,31 @@
 
 ## 当前状态
 
-- **已完成**：阶段 0（规格奠基）
-- **下一步**：阶段 1（工程脚手架），执行档 Sonnet，规格 `docs/specs/01-scaffold.md`
+- **已完成**：阶段 0（规格奠基）、阶段 1（工程脚手架）
+- **下一步**：阶段 2 第一段（models + note_io + library），执行档 Sonnet，规格 `docs/specs/02-core.md`
 - **新文献库位置**：未定。计划默认 `D:\Desktop\Reference\PaperTrail-Library`，阶段 3 执行前由用户确认。
 
 ## 待用户决定
 
-- git 提交身份（本机未配置全局 `user.name` / `user.email`；阶段 0 的提交用了仓库级占位身份 `PaperTrail Dev`，可随时改）。
-- GitHub 仓库名、公开还是私有、何时首次 push。
+- git 提交身份（本机未配置全局 `user.name` / `user.email`；仍在用仓库级占位身份 `PaperTrail Dev`。阶段 1 询问时用户回复的是一个 GitHub 地址而非姓名邮箱，未当作身份使用）。
+- GitHub 仓库：用户给出 `https://github.com/Wiolic/PaperTrail`，但未明确是否现在建远程/首次 push、公开还是私有；按红线未 push。
 - 新文献库放在哪。
 - 旧 DeepSeek key 需要轮换（明文存在旧库的 `scripts/.local_config.json` 与 `.claude/settings.local.json`）。
 
 ## 待架构档决定
 
-（暂无）
+阶段 1 中规格没写清、按最保守做法处理的地方：
+
+1. **React 版本**：ARCHITECTURE 第 7 节写 React 18，而 `npm create vite` 现在默认 React 19。选了 React 18（`react@18`、`@types/react@18`）。另外 npm 上 `typescript` 最新为 7.x、`vite` 为 8.x，均按最新装，构建通过；若要锁主版本需架构档定。
+2. **前端手写而非 `npm create vite`**：为避免交互式向导，按 react-ts 模板最小形态手写（单个 `tsconfig.json`，没有模板里的 app/node 双 tsconfig 与 eslint）。ESLint 未引入，规格没提。
+3. **`.gitignore`**：仓库已有一份（含 `.env`）。保留 `.env`，补充 `web/dist/`；规格要求的项均已覆盖。
+4. **`ruff.toml` 排除 `web/`**：避免 ruff 扫到前端目录。
+5. **`ErrorCode` 成员名**：规格只给了字符串值；成员名取值的大写形式（如 `CITEKEY_NOT_FOUND`），基于 `StrEnum`。
+6. **错误码到 HTTP 状态的映射**写在 `interfaces/api/app.py` 里（如 `citekey_not_found`→404、`locked`→423、未知→500）；规格只要求"统一处理器"，该映射需架构档确认是否放到 ARCHITECTURE 第 7 节。
+7. **wheel 打包**：`pyproject.toml` 用 hatch 的 `artifacts` 把被 gitignore 的 `web_dist` 纳入 wheel；阶段 11 打包时需验证。
+8. **`serve`**：`--no-browser` 缺省时用 1 秒定时器打开浏览器；会话令牌与 Host 校验（ARCHITECTURE 第 7 节）阶段 1 未做。
+9. `tests/fixtures/.gitkeep` 占位，保证目录入库。
+10. CI 工作流未在 GitHub 上实际跑过（未 push）；Action 版本号（checkout@v4、setup-uv@v5、setup-node@v4）是按记忆写的，首次 push 后需看结果。CI 的 Node 用 `lts/*`，本机是 Node 26.13.1（winget 的"LTS"包）。
 
 ## 相对 `PLAN.md` 的调整
 
@@ -25,6 +36,16 @@
 - PDF 文本抽取从 PyMuPDF 换成 pypdfium2：PyMuPDF 是 AGPL 许可，不适合随 MIT 软件一起分发。
 
 ## 记录
+
+### 阶段 1 — 工程脚手架（执行档）
+
+产出：规格第 1 节全部文件；环境新装 uv 0.13.8、Node 26.13.1（npm 11.20.0），均经用户同意。验收清单已逐条跑通（浏览器渲染未目测，用 HTTP 取回页面与 API 验证）。
+
+踩坑：
+
+- 新装的 uv/Node 不在已开终端的 PATH 里，需刷新 PATH 或重开终端。
+- 构建出 `web_dist` 后，测试里在 `create_app()` 之后加路由会被 `/` 的静态挂载盖住；错误处理器测试因此先把 `WEB_DIST` 指到不存在的目录。
+- 初次写 `.gitignore` 误覆盖了已有文件的 `.env` 行，已补回。
 
 ### 阶段 0 — 规格奠基（架构档）
 

@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "papertrail"
+version = "0.1.0.dev0"
+description = "文献精读笔记库软件"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2",
+    "pyyaml",
+    "rapidfuzz",
+    "httpx",
+    "typer",
+    "fastapi",
+    "uvicorn",
+    "filelock",
+    "keyring",
+]
+
+[project.optional-dependencies]
+llm = ["openai"]
+pdf = ["pypdfium2", "python-docx"]
+export = ["openpyxl", "python-docx", "citeproc-py"]
+word = ["pywin32; sys_platform == 'win32'"]
+acquire = ["playwright"]
+mcp = ["mcp"]
+all = [
+    "openai",
+    "pypdfium2",
+    "python-docx",
+    "openpyxl",
+    "citeproc-py",
+    "pywin32; sys_platform == 'win32'",
+    "playwright",
+    "mcp",
+]
+
+[project.scripts]
+papertrail = "papertrail.interfaces.cli.main:app"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "pyright",
+    "respx",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/papertrail"]
+artifacts = ["src/papertrail/web_dist"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

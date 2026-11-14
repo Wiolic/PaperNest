@@ -1,0 +1,29 @@
+:root {
+  --bg: #f4f1ec;
+  --blue-deep: #5b7c99;
+  --blue: #7b93ab;
+  --blue-light: #c4d1db;
+  --card: #e6e9e4;
+  --text: #3b4a54;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, "Microsoft YaHei", sans-serif;
+}
+
+.card {
+  max-width: 28rem;
+  margin: 4rem auto;
+  padding: 1.5rem 2rem;
+  background: var(--card);
+  border: 1px solid var(--blue-light);
+  border-radius: 8px;
+}
+
+h1 {
+  margin-top: 0;
+  color: var(--blue-deep);
+}

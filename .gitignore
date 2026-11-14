@@ -1,15 +1,23 @@
+# Python
 __pycache__/
 *.py[cod]
+*.egg-info/
 .venv/
 dist/
 build/
-*.egg-info/
 .pytest_cache/
 .ruff_cache/
 .coverage
 htmlcov/
-node_modules/
-src/papertrail/web_dist/
 *.db
 .papertrail/
+
+# Node
+node_modules/
+web/dist/
+
+# 前端构建产物
+src/papertrail/web_dist/
+
+# 本地环境
 .env
