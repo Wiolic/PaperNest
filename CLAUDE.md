@@ -57,6 +57,7 @@ cd web && npm run build         前端构建到 src/papernest/web_dist
 
 - 小步提交，一次提交一件事。格式 `<范围>: <做了什么>`，范围取模块名（`core`、`ingest`、`web`、`docs`、`ci` …）。
 - 提交前必须：pytest 全过、ruff 无报错、pyright 无报错。
+- 提交信息与 PR 描述**不加** `Co-Authored-By: Claude …` 或 "Generated with Claude Code" 一类署名行（用户要求 GitHub 贡献者里不列 Claude）。作者只用仓库配置的 git 身份。
 
 ## 会话收尾（每次都做）
 
