@@ -1,0 +1,1 @@
+citekey,row_id,test_type,reaction,electrolyte,temperature_C,catalyst_loading_mg_cm2,current_density_ref_mA_cm2,overpotential_mV,cell_voltage_V,tafel_slope_mV_dec,stability_duration_h,degradation_rate,other_metrics,source_location

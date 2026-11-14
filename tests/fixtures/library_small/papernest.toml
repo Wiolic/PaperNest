@@ -1,0 +1,40 @@
+[library]
+format_version = 1
+name = "示例库"
+
+[llm]
+base_url = "https://api.deepseek.com"
+model_extract = "deepseek-v4-flash"
+model_summarize = "deepseek-v4-pro"
+max_concurrency = 4
+timeout_seconds = 120
+max_fulltext_chars = 200000
+
+[ingest]
+skip_non_journal = true
+title_duplicate_threshold = 0.9
+si_filename_threshold = 0.82
+si_filename_min_chars = 10
+si_orphan_auto_threshold = 0.85
+si_orphan_report_threshold = 0.55
+crossref_title_threshold = 0.9
+
+[note]
+language = "zh"
+readable_wrap = 60
+sections = [
+  { id = "summary", heading = "三句话总结" },
+  { id = "problem_conclusion", heading = "研究问题与核心结论" },
+  { id = "method_points", heading = "方法要点" },
+  { id = "key_results", heading = "关键图表与数据" },
+  { id = "relevance", heading = "与我课题的关联" },
+  { id = "caveats", heading = "质疑与局限" },
+  { id = "further_reading", heading = "值得追的参考文献" },
+]
+
+[network]
+contact_email = ""
+
+[acquire]
+min_interval_seconds = 20
+daily_limit = 50
