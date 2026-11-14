@@ -4,8 +4,8 @@
 
 ## 当前状态
 
-- **已完成**：阶段 0（规格奠基）、阶段 1（工程脚手架）、阶段 2 第一段（models + note_io + library）
-- **下一步**：阶段 2 第二段（vocab + textsim + citekey + index），执行档 Sonnet，规格 `docs/specs/02-core.md` 第 4–7 节
+- **已完成**：阶段 0（规格奠基）、阶段 1（工程脚手架）、阶段 2 第一、二段（models、note_io、library、vocab、textsim、citekey、index）
+- **下一步**：阶段 2 第三段（state + services.doctor + 只读 CLI + 验收清单），执行档 Sonnet，规格 `docs/specs/02-core.md` 第 8–10、12 节
 - **新文献库位置**：未定。计划默认 `D:\Desktop\Reference\PaperNest-Library`，阶段 3 执行前由用户确认。
 
 ## 待用户决定
@@ -44,12 +44,43 @@
 21. **`tests/__init__.py` 与 `tests/unit/__init__.py`** 为让测试间共用 `make_paper` 而新增。
 22. **样例库**目前含 `notes/`（12 篇）、`papers/`（占位文件）、`papernest.toml`，以及 `Library.create` 生成的空词表、`profile.md`、`data/performance.csv` 表头。词表是空的，所以每篇的 tag 在后续 doctor 里都会"不在词表"；第二段做 vocab 时需要填入词表并设计"恰好一篇 tag 不在表"（预埋的是 `2023-Joule-Solar-Fuel-Cell` 的 `未收录标签`）。`text/` 目录为空（git 不跟踪空目录），第三段 doctor 的 `missing_text` 预期相应处理。样例里预埋：标题含 `: `（Nickel、Ruthenium）、含引号与 `#`、关键词含逗号、两篇 `unknown-`、DOI 为空、`X`/`X-2` 且标题相似度 > 0.9、一篇两个 SI、一篇自定义小节、一篇全空、中文作者。
 
+阶段 2 第二段（vocab / textsim / citekey / index）中规格没写清、按最保守做法处理的地方：
+
+23. **新增 `ErrorCode.VOCAB_CONFLICT`**（`add_journal` 缩写被占或同一期刊换缩写）。词表文件解析失败复用 `CONFIG_INVALID`。HTTP 状态码需架构档补进 ARCHITECTURE 第 7 节（目前落到 500）。
+24. **期刊表查找键**：全名与别名优先，缩写作为最低优先级的补充键（`journal_abbr("JACS")` 也能命中）。`Vocab.journal_key()` 是新增公开方法：表内期刊取规范全名的归一化形式，使别名在索引与过滤里合并；`papers.journal_norm` 用它。`add_journal` 缩写只允许 `[A-Za-z0-9]+`（citekey 要用），占用检查不区分大小写；同名同缩写重复添加为空操作。
+25. **表征方法归一化**：前缀匹配容忍 `in-situ`、`insitu`、`In Situ`（LEGACY 第 5 节新发现项）；只有前缀没有技术名时不当作前缀；读入时顺手去掉旧库遗留的 `unmapped:` 前缀；中文前缀"原位/工况下/非原位"（LEGACY R07）规格未要求，未做。
+26. **词表类 `save()` 只写 tags/journals/characterization 三个文件**，不碰 `discovery.yaml`；输出为块式映射 + 行内标量列表，样例库词表即由它生成，测试断言往返字节不变。词表里出现未知键即报错（与笔记一致 extra=forbid）。
+27. **textsim**：`normalize_title` 额外去 HTML 标签与实体、做 NFKC，标点一律视作空白；`normalize_filename` 切词用 `[\W_]+` 而非 LEGACY 的 `[^a-z0-9]+`（后者会把中文文件名切光）；缺失 DOI/标题占位集合（R05）放在 `textsim`，提供 `is_missing_doi/is_missing_title`。`models.normalize_doi` 不处理占位值（"N/A" 仍是字符串），迁移与入库层需先过 `is_missing_doi`。归一化后为空的标题不参与相似度（返回 0 / 不进配对）。
+28. **`find_similar_titles` 未用 `cdist`**：环境没有 numpy，而 `cdist` 依赖它；改为按长度排序 + 长度窗口 + `process.extract(score_cutoff)`，结果与暴力比较一致（有对拍测试）。1 万条约 2–3 秒。
+29. **citekey**：`build` 的期刊缩写为空时按 DATA_MODEL 写 `unknown`（LEGACY R03 写的是 `Journal`，两者冲突，取 DATA_MODEL）；`condense_words` 的 `preserve` 缺省为空，另提供 `DEFAULT_PRESERVE`（取自 R03 点名的元素与缩写）供调用方选用，是否写死不由 core 决定；词内连字符与标点当作分隔。
+30. **index 的小决定**：
+    - `SearchQuery` 新增 `include_fulltext`（默认 False，text 只搜笔记 FTS）；规格提到"全文可在配置中关闭"，但 `LibraryConfig` 没有该开关，故 `text/` 一律索引。
+    - FTS 对汉字入库与查询两侧都按字拆开，使中文子串可检索；英文按词、多词 AND。
+    - 额外的内部表：`fulltext_state`（全文文件 size/mtime）、`index_errors` 带 size/mtime/hash（坏文件不重复解析）。`meta` 另存 `vocab_hash`、`performance_sig`。词表文件变了会让下次 `sync` 重新解析全部笔记（派生列如顶刊标记依赖词表），这些笔记计入 `updated`。
+    - `has_pdf/si_count` 每次 `sync` 都按 `papers/` 目录核对一遍（一次遍历），不依赖笔记是否改动；匹配规则与 `Library.main_file/si_files` 一致，有对拍测试。
+    - 解析失败的笔记若此前在索引里，会从索引移除并计入 `removed` 与 `errors`。
+    - 新增 `Index.keyword_counts()`、`characterization_counts()`、`performance_rows()`、`close()`；`performance.csv` 在 `sync` 时载入 `performance` 表，非法行跳过（由 doctor 报告）。
+    - `facets()` 统计全库，不随查询过滤；`journals` 按 `journal_norm` 合并，显示名取最小的原写法。`tags` 存笔记里的原写法（不经词表归一，才能看出"不在词表"）。
+    - `Index` 自己不持有 `Vocab`，每次 `sync/search` 现读词表文件；连接带 `RLock`，可被 API 线程池共用。
+31. 样例库词表：tags 6 项（含 `单原子` 的别名 `单原子催化`）、期刊 9 项（样例用到的 8 个，外加 Angewandte 以覆盖 `ACIE` 别名用例）、表征方法 9 项（XAS/XANES/EXAFS/STM/Raman/XRD/XPS/TEM/AFM）。`未收录标签` 是唯一不在词表里的 tag；`wacky probe` 是唯一未映射的表征写法。样例里 `2021-Science-Layered-Oxide-Transport` 没有 papers 占位文件（第一段遗留），所以 `has_pdf=False` 共两篇（另一篇是 `unknown-unknown-Sparse-Record`）；第三段 doctor 的 `missing_main_file` 预期应是这两篇。
+
 ## 相对 `PLAN.md` 的调整
 
 - 卷期页的 Crossref 补齐从"迁移时做"改为阶段 4 的独立命令 `papernest paper enrich`，因为迁移工具不触网，这样迁移结果可离线复现和校验。
 - PDF 文本抽取从 PyMuPDF 换成 pypdfium2：PyMuPDF 是 AGPL 许可，不适合随 MIT 软件一起分发。
 
 ## 记录
+
+### 阶段 2 第二段 — vocab + textsim + citekey + index（执行档）
+
+产出：`core/vocab.py`、`core/textsim.py`、`core/citekey.py`、`core/index.py`、样例库词表三份，以及四份单元测试；`errors.py` 增加 `VOCAB_CONFLICT`。models、note_io、library 未改。pytest 236 项全过，`core/` 覆盖率 97.7%，ruff、ruff format、pyright、`test_layering` 通过。`find_similar_titles` 1 万条性能测试与 `sync` 增量测试（改一个文件只重解析一个）均已建。回归用例同名测试：`test_journal_abbr_canonical_mapping`、`test_top_journals_match_normalizes_journal_names`、`test_characterization_prefix_variants_normalized`、`test_unmapped_prefix_not_in_frontmatter`（vocab 与 index 两侧）、`test_citekey_collision_case_insensitive`、`test_dedupe_title_normalization`、`test_crossref_title_html_tags_stripped_on_ingest`（textsim 部分）、`test_missing_doi_placeholders_single_definition`（定义部分）、`test_title_dedupe_does_not_bleed_across_bib_entries`、`test_recent_added_not_affected_by_rewrite`、`test_keyword_index_counts_from_structured_lists`。
+
+踩坑：
+
+- 环境没有 numpy，`rapidfuzz.process.cdist` 不可用，见待决定第 28 条。
+- SQLite 的 `bm25()` 只能在直接查询 FTS 表的语句里用，放进带 JOIN 的子查询会报"unable to use function bm25"；要用 `AS MATERIALIZED` 的 CTE 单独取分。
+- 仓库有保存即格式化的钩子，Write 之后文件内容会被 ruff 改写，再 Edit 前要重新读。
+- CI 跑 Python 3.11：不要用 PEP 695 的 `def f[T]()` 泛型语法。
 
 ### 阶段 2 第一段 — models + note_io + library（执行档）
 
