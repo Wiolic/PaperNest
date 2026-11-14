@@ -4,8 +4,8 @@
 
 ## 当前状态
 
-- **已完成**：阶段 0（规格奠基）、阶段 1（工程脚手架）、阶段 2 第一、二段（models、note_io、library、vocab、textsim、citekey、index）
-- **下一步**：阶段 2 第三段（state + services.doctor + 只读 CLI + 验收清单），执行档 Sonnet，规格 `docs/specs/02-core.md` 第 8–10、12 节
+- **已完成**：阶段 0（规格奠基）、阶段 1（工程脚手架）、**阶段 2 全部**（core 九个模块、services.doctor、只读 CLI）
+- **下一步**：阶段 2 验收（Opus 架构档），并写阶段 3 所需的规格 04（适配层）、05（入库流水线）
 - **新文献库位置**：未定。计划默认 `D:\Desktop\Reference\PaperNest-Library`，阶段 3 执行前由用户确认。
 
 ## 待用户决定
@@ -64,12 +64,32 @@
     - `Index` 自己不持有 `Vocab`，每次 `sync/search` 现读词表文件；连接带 `RLock`，可被 API 线程池共用。
 31. 样例库词表：tags 6 项（含 `单原子` 的别名 `单原子催化`）、期刊 9 项（样例用到的 8 个，外加 Angewandte 以覆盖 `ACIE` 别名用例）、表征方法 9 项（XAS/XANES/EXAFS/STM/Raman/XRD/XPS/TEM/AFM）。`未收录标签` 是唯一不在词表里的 tag；`wacky probe` 是唯一未映射的表征写法。样例里 `2021-Science-Layered-Oxide-Transport` 没有 papers 占位文件（第一段遗留），所以 `has_pdf=False` 共两篇（另一篇是 `unknown-unknown-Sparse-Record`）；第三段 doctor 的 `missing_main_file` 预期应是这两篇。
 
+阶段 2 第三段（state / doctor / CLI）中规格没写清、按最保守做法处理的地方：
+
+32. **state 的模型放在 `state.py` 里**（`LedgerEntry`、`Watermark`、`ReviewItem`），没改 `models.py`；ARCHITECTURE 第 4 节把 `ReviewItem`、`Job` 列在 `models`，需架构档决定是否迁移。接口命名：`State` 类的方法 `ledger_get/put/list`、`watermark_get/put`（`put` 把旧水位追加进 `history_json`）、`review_add/get/list/resolve`；`review_resolve` 对已处理条目抛错而不是覆盖，`dismissed=True` 表示驳回。`job_*`、`wanted_*`、`usage_add` 为抛 `NOT_SUPPORTED` 的占位，参数签名未定，阶段 5、8 实现时才定。裁决/台账的非法值用 `ErrorCode.INTERNAL`（没有合适的专用码）。
+33. **state.db 的原子性靠 SQLite 事务**（`BEGIN IMMEDIATE`，WAL，timeout 30 秒），不经 `Library.atomic_write`；首次打开时切 WAL 与建表在多连接并发下会立刻报 locked，故加了重试。写入没有套 `Library.write_lock`（库级写锁管笔记文件，state 自己有 SQLite 锁）。
+34. **doctor 不依赖索引**：逐篇 `read_note` 解析（才能给出具体原因），所以不会触发 `index.sync()`，也不写任何东西（有测试：体检前后库内文件字节不变）。因此 `performance.csv` 也由 doctor 直接读，**额外**增加一个 `performance_invalid`（warning，格式不合法的行），规格 13 项之外。
+35. **severity 约定**：`note_invalid` 为 error（含文件名不是合法 citekey）；`missing_text`、`unreviewed_vocab`、`inbox_pending` 为 info；其余 warning。`doctor` 命令在存在 error 时退出码为 1，否则 0（规格没写退出码）。
+36. **`missing_text`**：样例库 `text/` 为空，所以有主文件的 10 篇都会报（info）；未给样例库补 `text/` 文件。`dangling_topic_ref` 只认形如 citekey 的 `[[x]]`（主题间链接 `[[some topic]]` 不算悬空），支持 `[[ck|别名]]`、`[[ck#小节]]`；样例库 `topics/` 为空，该项只在单元测试里验证。`characterization_unmapped` 汇总成一条（`data.counts`），`tag_not_in_vocab`、`journal_not_in_vocab` 每个不在表的值一条。
+37. **CLI**：`--library` 既可放在子命令前（全局），也可放在子命令后（局部优先）；缺省读环境变量 `PAPERNEST_LIBRARY`，ARCHITECTURE 提到的"用户级配置里的默认库"尚无配置文件，未做。错误在 `--json` 下输出 `{"error": {...}}` 到 stdout，非 json 下输出到 stderr，退出码 1。`paper list` 与 `index rebuild` 会在 `.papernest/` 里建索引（被 gitignore）。`library init` 的 `--name` 缺省「我的文献库」。命令实现放在新文件 `interfaces/cli/commands.py`（ARCHITECTURE 目录图写的是 `commands/` 目录），因目前只有几十行。
+38. **`ServiceContext`** 是 dataclass，含 `library/index/state/vocab` 与六个适配器字段（`object | None`，阶段 3 起改成 Protocol）；`ServiceContext.open(root)` 与 `close()` 为便捷方法。
+
 ## 相对 `PLAN.md` 的调整
 
 - 卷期页的 Crossref 补齐从"迁移时做"改为阶段 4 的独立命令 `papernest paper enrich`，因为迁移工具不触网，这样迁移结果可离线复现和校验。
 - PDF 文本抽取从 PyMuPDF 换成 pypdfium2：PyMuPDF 是 AGPL 许可，不适合随 MIT 软件一起分发。
 
 ## 记录
+
+### 阶段 2 第三段 — state + doctor + CLI（执行档）
+
+产出：`core/state.py`、`services/context.py`、`services/doctor.py`、`interfaces/cli/commands.py`（library init/info、paper list/show、index rebuild、doctor）及 `test_state.py`、`test_doctor.py`、`test_cli.py`。models、note_io、library、vocab、textsim、citekey、index 未改。**阶段 2 验收清单四条通过**：pytest 274 项全过、`core/` 覆盖率 98.0%（≥90%）；ruff、ruff format、pyright 无报错；`test_layering` 通过；`doctor --json` 对样例库恰好报出：`similar_titles`（Hybrid-Membrane-Design 与 -2）、`missing_main_file`（Layered-Oxide-Transport、unknown-unknown-Sparse-Record）、`tag_not_in_vocab`（未收录标签）、`characterization_unmapped`（wacky probe）、`missing_text`（info，10 篇）；`paper list --text Nickel --json` 命中 `2023-JACS-Nickel-Catalyst-Selective`。回归用例同名测试：`test_ingest_resume_keyed_by_sha256`、`test_state_write_is_atomic`（state 部分）、`test_concurrent_writes_no_lost_update`（state 部分）。
+
+踩坑：
+
+- 两个 SQLite 连接同时首次打开 state.db，`PRAGMA journal_mode=WAL` 与建表会报 `database is locked`，且 `meta` 的初始插入会撞主键；改为重试加 `INSERT OR IGNORE`。
+- 在样例库目录里直接跑 CLI 会生成 `tests/fixtures/library_small/.papernest/index.db`（已 gitignore），但会让 `test_sync_sample_library`（期望新增 12 篇）失败；手动跑完要删掉该目录。测试里一律用 `small_lib_path` 副本。
+- 本机终端是 GBK，直接看 CLI 中文输出会乱码，用 `PYTHONIOENCODING=utf-8` 或 `--json | python` 查看。
 
 ### 阶段 2 第二段 — vocab + textsim + citekey + index（执行档）
 

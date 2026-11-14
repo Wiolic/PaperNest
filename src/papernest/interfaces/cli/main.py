@@ -3,13 +3,29 @@ from __future__ import annotations
 import json
 import threading
 import webbrowser
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from papernest import __version__
+from papernest.interfaces.cli import commands
 
 app = typer.Typer(help="PaperNest：文献精读笔记库", no_args_is_help=True, add_completion=False)
+
+
+@app.callback()
+def _root(
+    ctx: typer.Context,
+    library: Annotated[
+        Path | None,
+        typer.Option("--library", help="文献库路径；缺省读环境变量 PAPERNEST_LIBRARY"),
+    ] = None,
+) -> None:
+    ctx.obj = {"library": library}
+
+
+commands.register(app)
 
 
 @app.command()
