@@ -1,1 +1,46 @@
-journals: []
+journals:
+- name: Nature
+  abbr: Nature
+  aliases: []
+  top: true
+  unreviewed: false
+- name: Science
+  abbr: Science
+  aliases: []
+  top: true
+  unreviewed: false
+- name: Nature Energy
+  abbr: NatEnergy
+  aliases: []
+  top: true
+  unreviewed: false
+- name: Nature Communications
+  abbr: NatCommun
+  aliases: [Nat. Commun.]
+  top: false
+  unreviewed: false
+- name: Journal of the American Chemical Society
+  abbr: JACS
+  aliases: [J. Am. Chem. Soc., JACS]
+  top: true
+  unreviewed: false
+- name: Advanced Materials
+  abbr: AdvMater
+  aliases: [Adv. Mater.]
+  top: true
+  unreviewed: false
+- name: ACS Nano
+  abbr: ACSNano
+  aliases: []
+  top: false
+  unreviewed: false
+- name: Joule
+  abbr: Joule
+  aliases: []
+  top: true
+  unreviewed: false
+- name: Angewandte Chemie International Edition
+  abbr: AngewChemIntEd
+  aliases: [Angew. Chem. Int. Ed., Angewandte Chemie, ACIE]
+  top: true
+  unreviewed: false

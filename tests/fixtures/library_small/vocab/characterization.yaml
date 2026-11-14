@@ -1,2 +1,29 @@
-prefixes: ["in situ", "operando", "ex situ"]
-methods: []
+prefixes: [in situ, operando, ex situ]
+methods:
+- name: XAS
+  aliases: [XAFS]
+  parent: null
+- name: XANES
+  aliases: []
+  parent: XAS
+- name: EXAFS
+  aliases: []
+  parent: XAS
+- name: STM
+  aliases: [scanning tunneling microscopy]
+  parent: null
+- name: Raman
+  aliases: [Raman spectroscopy, 拉曼]
+  parent: null
+- name: XRD
+  aliases: [PXRD, powder XRD, GIXRD, SXRD]
+  parent: null
+- name: XPS
+  aliases: []
+  parent: null
+- name: TEM
+  aliases: []
+  parent: null
+- name: AFM
+  aliases: []
+  parent: null

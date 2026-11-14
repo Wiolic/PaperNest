@@ -14,6 +14,7 @@ class ErrorCode(StrEnum):
     LIBRARY_EXISTS = "library_exists"
     CONFIG_INVALID = "config_invalid"
     FILE_EXISTS = "file_exists"
+    VOCAB_CONFLICT = "vocab_conflict"
     LOCKED = "locked"
     LLM_OUTPUT_INVALID = "llm_output_invalid"
     EXTERNAL_SERVICE = "external_service"
