@@ -3,10 +3,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from papertrail import __version__
-from papertrail.core.errors import ErrorCode, PaperTrailError
-from papertrail.interfaces.api import app as app_module
-from papertrail.interfaces.api.app import create_app
+from papernest import __version__
+from papernest.core.errors import ErrorCode, PaperNestError
+from papernest.interfaces.api import app as app_module
+from papernest.interfaces.api.app import create_app
 
 
 def test_health() -> None:
@@ -23,7 +23,7 @@ def test_error_handler_shape(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
 
     @app.get("/boom")
     def boom() -> None:
-        raise PaperTrailError(ErrorCode.CITEKEY_NOT_FOUND, "找不到", {"citekey": "x"})
+        raise PaperNestError(ErrorCode.CITEKEY_NOT_FOUND, "找不到", {"citekey": "x"})
 
     resp = TestClient(app).get("/boom")
     assert resp.status_code == 404

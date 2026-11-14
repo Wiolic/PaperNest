@@ -1,4 +1,4 @@
-# PaperTrail 2.0 开发约定
+# PaperNest 开发约定
 
 文献精读笔记库软件。本仓库只有代码和文档，不含任何文献数据。
 
@@ -36,7 +36,7 @@
 - 修改库的服务函数成对提供 `plan_*`（预览）与 `apply_*`（执行）。
 - 写文件只通过 `Library.atomic_write`；删除只通过 `Library.trash`；按 citekey 找文件只通过 `Library` 的方法。
 - 对外访问（网络、LLM、Word、浏览器）只在 `adapters/` 与 `services/word`，测试里一律替身，不真的触网。
-- 错误用 `core.errors.PaperTrailError` 及其 `ErrorCode`。
+- 错误用 `core.errors.PaperNestError` 及其 `ErrorCode`。
 - 公开函数带类型标注。注释只写"为什么"，用中文或英文均可，标识符用英文。
 - 面向用户的文字（CLI 输出、API 错误信息、界面）默认中文。
 
@@ -48,9 +48,9 @@ uv run pytest                   测试
 uv run ruff check . --fix       检查
 uv run ruff format .            格式化
 uv run pyright                  类型检查
-uv run papertrail --help        运行 CLI
+uv run papernest --help        运行 CLI
 cd web && npm run dev           前端开发服务器
-cd web && npm run build         前端构建到 src/papertrail/web_dist
+cd web && npm run build         前端构建到 src/papernest/web_dist
 ```
 
 ## 提交

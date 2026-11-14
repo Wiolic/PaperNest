@@ -1,16 +1,17 @@
-# PaperTrail 2.0 架构
+# PaperNest 架构
 
 本文件定义模块边界、依赖方向和通用约定。数据格式见 `DATA_MODEL.md`，旧功能对照见 `LEGACY_MAP.md`，各阶段的落地细节见 `specs/`。三者冲突时以 `DATA_MODEL.md` 为准，其次本文件。
 
 ## 1. 总体形态
 
-- 一个 Python 包 `papertrail`（Python ≥ 3.11），MIT 许可。
+- 名称：**PaperNest**，旧系统 PaperTrail（v1）的重写版，原计划名"PaperTrail 2.0"。旧仓库 `Wiolic/PaperTrail` 保留给 v1，新仓库为 `Wiolic/PaperNest`。所有标识统一用新名：包与命令 `papernest`、环境变量前缀 `PAPERNEST_`、库配置 `papernest.toml`、库内目录 `.papernest/`、凭据服务名 `papernest`、错误基类 `PaperNestError`。文中提到"旧系统""旧库"时仍指 PaperTrail v1 及其路径 `D:\Desktop\Reference\PaperTrail`。
+- 一个 Python 包 `papernest`（Python ≥ 3.11），MIT 许可。
 - 软件与数据分离：软件安装在系统里；"文献库"是用户选定的一个文件夹（下称库）。一个进程同一时刻只打开一个库。
 - 四个入口共用同一服务层，任何功能都必须先是一个服务函数，再被入口暴露：
   - Web UI：浏览器里的单页应用，只通过 REST API 工作。
-  - REST API：`papertrail serve` 启动的本机 HTTP 服务。
-  - CLI：`papertrail <命令>`，全部支持 `--json`。
-  - MCP server：`papertrail mcp`，供 agent 调用。
+  - REST API：`papernest serve` 启动的本机 HTTP 服务。
+  - CLI：`papernest <命令>`，全部支持 `--json`。
+  - MCP server：`papernest mcp`，供 agent 调用。
 
 ## 2. 分层与依赖方向
 
@@ -31,14 +32,14 @@ core/         models note_io library index state vocab citekey textsim
 - 依赖只能向下。`core` 不 import `adapters`/`services`；`adapters` 之间不互相 import。
 - 入口层不含业务逻辑：参数解析、调服务、格式化输出，仅此而已。
 - 所有对外部世界的访问（网络、LLM、Word、浏览器、系统凭据）都在 `adapters/` 或 `services/word`，并以 Protocol 接口注入服务，测试里用假实现替换。
-- `papertrail.migrate` 是独立的一次性工具，只依赖 `core`。
+- `papernest.migrate` 是独立的一次性工具，只依赖 `core`。
 
 ## 3. 目录结构
 
 ```
-papertrail/                      仓库根
+papernest/                      仓库根
   pyproject.toml  uv.lock  README.md  LICENSE  CLAUDE.md
-  src/papertrail/
+  src/papernest/
     __init__.py  __main__.py
     core/        models.py note_io.py library.py index.py state.py
                  vocab.py citekey.py textsim.py errors.py
@@ -61,7 +62,7 @@ papertrail/                      仓库根
 |---|---|
 | `models` | pydantic v2 模型：`Paper`（frontmatter）、`Note`（Paper + 正文各节）、`Attachment`、`PerformanceRow`、`ReviewItem`、`Job` 等。所有校验规则集中在这里。 |
 | `note_io` | 笔记文件的读与写。读用 YAML 解析器，写用确定性输出（字段顺序固定、LF、UTF-8 无 BOM）。同一份 `Note` 写出的字节永远相同。 |
-| `library` | 库的目录布局、路径计算、打开与创建、`papertrail.toml` 读写、原子写（临时文件 + `os.replace`）、库级写锁、回收区。按 citekey 找文件一律精确匹配，禁止前缀通配。 |
+| `library` | 库的目录布局、路径计算、打开与创建、`papernest.toml` 读写、原子写（临时文件 + `os.replace`）、库级写锁、回收区。按 citekey 找文件一律精确匹配，禁止前缀通配。 |
 | `index` | SQLite 索引（含 FTS5）。可随时删除重建；按笔记文件的大小 + mtime + 内容哈希做增量同步。只读查询接口供服务层使用。 |
 | `state` | 不可重建的运行状态：任务、审核队列、入库台账（以源文件 sha256 为键）、扫描水位、LLM 用量。 |
 | `vocab` | 标签词表、期刊表（全名、缩写、别名、是否顶刊）、表征方法词表、查新分类规则的加载、校验与归一化。 |
@@ -73,10 +74,10 @@ papertrail/                      仓库根
 | 模块 | 说明 |
 |---|---|
 | `llm` | OpenAI 兼容协议客户端。两个档位：`extract`（便宜，做结构化抽取）与 `summarize`（强，写给人看的内容与判断），模型名来自库配置。统一提供：超时、指数退避重试、并发上限、用量记录；`complete_json(tier, system, user, schema)` 用 pydantic 模型校验返回，校验失败带着错误信息重试一次，仍失败抛 `LLMOutputError`。 |
-| `crossref` `openalex` `unpaywall` | 基于共享的 `http` 模块（httpx、礼貌限速、磁盘缓存到 `.papertrail/cache/`）。联系邮箱从配置读，默认不带。 |
+| `crossref` `openalex` `unpaywall` | 基于共享的 `http` 模块（httpx、礼貌限速、磁盘缓存到 `.papernest/cache/`）。联系邮箱从配置读，默认不带。 |
 | `pdf_text` | PDF 文本抽取（pypdfium2）与 docx 文本抽取。返回文本 + 是否疑似扫描件。 |
-| `secrets` | 通过 `keyring` 读写系统凭据库。环境变量 `PAPERTRAIL_LLM_API_KEY` 优先。任何地方都不把密钥写入库目录、日志或任务记录。 |
-| `browser` | Playwright 驱动系统自带 Edge（`channel="msedge"`，持久化用户目录在 `.papertrail/browser/`）。只提供"打开登录窗口""带会话取回一个 URL 的 PDF"两件事。 |
+| `secrets` | 通过 `keyring` 读写系统凭据库。环境变量 `PAPERNEST_LLM_API_KEY` 优先。任何地方都不把密钥写入库目录、日志或任务记录。 |
+| `browser` | Playwright 驱动系统自带 Edge（`channel="msedge"`，持久化用户目录在 `.papernest/browser/`）。只提供"打开登录窗口""带会话取回一个 URL 的 PDF"两件事。 |
 
 ## 6. 服务层约定
 
@@ -100,8 +101,8 @@ papertrail/                      仓库根
 
 ### CLI
 
-- Typer。命令按名词分组：`papertrail library|paper|ingest|review|discover|acquire|cite|topic|export|doctor|word|job|config|serve|mcp|migrate-legacy`。
-- 每条命令支持 `--json`（机器可读，stdout 只有一个 JSON 文档）和 `--library <路径>`（否则读环境变量 `PAPERTRAIL_LIBRARY`，再否则读用户级配置里的默认库）。
+- Typer。命令按名词分组：`papernest library|paper|ingest|review|discover|acquire|cite|topic|export|doctor|word|job|config|serve|mcp|migrate-legacy`。
+- 每条命令支持 `--json`（机器可读，stdout 只有一个 JSON 文档）和 `--library <路径>`（否则读环境变量 `PAPERNEST_LIBRARY`，再否则读用户级配置里的默认库）。
 - 会修改库的命令默认预览，加 `--apply` 才执行。
 
 ### MCP
@@ -148,5 +149,5 @@ papertrail/                      仓库根
 ## 10. 版本与升级
 
 - 软件版本遵循语义化版本，`CHANGELOG.md` 记录。
-- 库有独立的 `format_version`（整数）。软件打开库时：版本相同直接用；库较旧则先把 `notes/` 与 `.papertrail/state.db` 备份到 `.papertrail/backups/<时间戳>/`，再依次执行迁移函数；库比软件新则拒绝打开并提示升级软件。
+- 库有独立的 `format_version`（整数）。软件打开库时：版本相同直接用；库较旧则先把 `notes/` 与 `.papernest/state.db` 备份到 `.papernest/backups/<时间戳>/`，再依次执行迁移函数；库比软件新则拒绝打开并提示升级软件。
 - 索引库有自己的 `schema_version`，不匹配时直接删除重建。

@@ -18,7 +18,7 @@ class ErrorCode(StrEnum):
     INTERNAL = "internal"
 
 
-class PaperTrailError(Exception):
+class PaperNestError(Exception):
     """所有可预期错误的基类；入口层据 `code` 映射为退出码或 HTTP 状态。"""
 
     def __init__(

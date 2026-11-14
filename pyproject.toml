@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "papertrail"
+name = "papernest"
 version = "0.1.0.dev0"
 description = "文献精读笔记库软件"
 readme = "README.md"
@@ -40,7 +40,7 @@ all = [
 ]
 
 [project.scripts]
-papertrail = "papertrail.interfaces.cli.main:app"
+papernest = "papernest.interfaces.cli.main:app"
 
 [dependency-groups]
 dev = [
@@ -52,8 +52,8 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/papertrail"]
-artifacts = ["src/papertrail/web_dist"]
+packages = ["src/papernest"]
+artifacts = ["src/papernest/web_dist"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -10,14 +10,14 @@ build/
 .coverage
 htmlcov/
 *.db
-.papertrail/
+.papernest/
 
 # Node
 node_modules/
 web/dist/
 
 # 前端构建产物
-src/papertrail/web_dist/
+src/papernest/web_dist/
 
 # 本地环境
 .env

@@ -15,7 +15,7 @@ export default function App() {
 
   return (
     <main className="card">
-      <h1>PaperTrail</h1>
+      <h1>PaperNest</h1>
       {health && <p>版本 {health.version}</p>}
       {error && <p>无法连接服务：{error}</p>}
       {!health && !error && <p>连接中…</p>}

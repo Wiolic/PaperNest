@@ -1,4 +1,4 @@
-# PaperTrail 2.0 数据模型（库格式 v1）
+# PaperNest 数据模型（库格式 v1）
 
 本文件是数据格式的唯一权威定义。
 
@@ -6,7 +6,7 @@
 
 ```
 <库>/
-  papertrail.toml            库配置 + format_version
+  papernest.toml            库配置 + format_version
   profile.md                 课题背景（注入 LLM 提示词）
   notes/<citekey>.md         ★真源：元数据 (YAML frontmatter) + 精读笔记正文
   papers/<citekey>.<ext>     ★真源：主文件（pdf）
@@ -20,7 +20,7 @@
   vocab/discovery.yaml       查新领域定义与分类规则
   inbox/                     待入库文件
   exports/                   导出物（bib、RIS、docx、xlsx、可读版笔记…），可随时删除
-  .papertrail/
+  .papernest/
     index.db                 可重建索引
     state.db                 运行状态（不可重建）
     cache/                   HTTP 缓存
@@ -38,7 +38,7 @@
 - `library.bib`、`INDEX.md`、`KEYWORDS.md`、`notes-readable/` 在 v1 中不存在于库内，需要时由 `exports` 生成到 `exports/`。
 - 扩展名统一小写。
 
-## 2. papertrail.toml
+## 2. papernest.toml
 
 ```toml
 [library]
@@ -84,7 +84,7 @@ min_interval_seconds = 20     # 机构下载两次请求的最小间隔
 daily_limit = 50
 ```
 
-API 密钥不在此文件中，存系统凭据库（服务名 `papertrail`，键名 `llm_api_key`）。
+API 密钥不在此文件中，存系统凭据库（服务名 `papernest`，键名 `llm_api_key`）。
 
 ## 3. 笔记文件
 
@@ -102,7 +102,7 @@ API 密钥不在此文件中，存系统凭据库（服务名 `papertrail`，键
 …
 ```
 
-- 正文是 Markdown。按 `papertrail.toml` 的 `[note].sections` 顺序排列二级标题。读取时未知的二级标题原样保留在末尾（用户手写的额外小节不能丢）。
+- 正文是 Markdown。按 `papernest.toml` 的 `[note].sections` 顺序排列二级标题。读取时未知的二级标题原样保留在末尾（用户手写的额外小节不能丢）。
 - 小节内容允许为空字符串。
 
 ### 3.2 frontmatter 字段（固定顺序）
@@ -279,9 +279,9 @@ llm_usage(at, job_id, tier, model, prompt_tokens INT, completion_tokens INT)
 
 ## 9. Word 文档内的引用（v1 约定，细节见阶段 10 规格）
 
-- 每处引用是一个富文本内容控件，`Tag = "papertrail:cite:<citekey>[;<citekey>…]"`，显示文本由当前样式渲染。
-- 参考文献表是一个内容控件，`Tag = "papertrail:bibliography"`。
-- 当前样式名存在文档自定义属性 `PaperTrailStyle`。
+- 每处引用是一个富文本内容控件，`Tag = "papernest:cite:<citekey>[;<citekey>…]"`，显示文本由当前样式渲染。
+- 参考文献表是一个内容控件，`Tag = "papernest:bibliography"`。
+- 当前样式名存在文档自定义属性 `PaperNestStyle`。
 - 文档旁不再有外置状态文件。
 
 ## 10. 格式演进

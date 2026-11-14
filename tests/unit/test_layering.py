@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parents[2] / "src" / "papertrail"
+SRC = Path(__file__).resolve().parents[2] / "src" / "papernest"
 
 # 各层禁止 import 的层
 FORBIDDEN: dict[str, set[str]] = {
@@ -23,12 +23,12 @@ def _imported_layers(path: Path) -> set[str]:
             names = [a.name for a in node.names]
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             names = [node.module]
-            # `from papertrail import services`
-            if node.module == "papertrail":
-                names = [f"papertrail.{a.name}" for a in node.names]
+            # `from papernest import services`
+            if node.module == "papernest":
+                names = [f"papernest.{a.name}" for a in node.names]
         for name in names:
             parts = name.split(".")
-            if parts[0] == "papertrail" and len(parts) > 1:
+            if parts[0] == "papernest" and len(parts) > 1:
                 layers.add(parts[1])
     return layers
 

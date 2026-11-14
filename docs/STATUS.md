@@ -6,13 +6,12 @@
 
 - **已完成**：阶段 0（规格奠基）、阶段 1（工程脚手架）
 - **下一步**：阶段 2 第一段（models + note_io + library），执行档 Sonnet，规格 `docs/specs/02-core.md`
-- **新文献库位置**：未定。计划默认 `D:\Desktop\Reference\PaperTrail-Library`，阶段 3 执行前由用户确认。
+- **新文献库位置**：未定。计划默认 `D:\Desktop\Reference\PaperNest-Library`，阶段 3 执行前由用户确认。
 
 ## 待用户决定
 
-- git 提交身份（本机未配置全局 `user.name` / `user.email`；仍在用仓库级占位身份 `PaperTrail Dev`。阶段 1 询问时用户回复的是一个 GitHub 地址而非姓名邮箱，未当作身份使用）。
-- GitHub 仓库：用户给出 `https://github.com/Wiolic/PaperTrail`，但未明确是否现在建远程/首次 push、公开还是私有；按红线未 push。
 - 新文献库放在哪。
+- 本地仓库文件夹仍叫 `D:\Dev\papertrail`，是否改成 `D:\Dev\papernest`（需在会话外改，改后 `.venv` 要重建）。
 - 旧 DeepSeek key 需要轮换（明文存在旧库的 `scripts/.local_config.json` 与 `.claude/settings.local.json`）。
 
 ## 待架构档决定
@@ -32,10 +31,16 @@
 
 ## 相对 `PLAN.md` 的调整
 
-- 卷期页的 Crossref 补齐从"迁移时做"改为阶段 4 的独立命令 `papertrail paper enrich`，因为迁移工具不触网，这样迁移结果可离线复现和校验。
+- 卷期页的 Crossref 补齐从"迁移时做"改为阶段 4 的独立命令 `papernest paper enrich`，因为迁移工具不触网，这样迁移结果可离线复现和校验。
 - PDF 文本抽取从 PyMuPDF 换成 pypdfium2：PyMuPDF 是 AGPL 许可，不适合随 MIT 软件一起分发。
 
 ## 记录
+
+### 定名 PaperNest（架构档）
+
+- 用户定名 **PaperNest**，取代"PaperTrail 2.0"。全部文档、代码、包名、命令、环境变量前缀、库内文件名已改（规则见 `ARCHITECTURE.md` 第 1 节）。指向旧系统的引用（旧库路径、旧启动器文件名）保持原样。
+- git 身份定为 `Eggy`（仓库级），历史提交作者已全部改写为 Eggy。
+- 新建公开仓库 `https://github.com/Wiolic/PaperNest` 并推送 `main`。旧仓库 `Wiolic/PaperTrail`（v1）未动。用户授权范围：只 push；不发版、不改仓库设置、不强推。
 
 ### 阶段 1 — 工程脚手架（执行档）
 

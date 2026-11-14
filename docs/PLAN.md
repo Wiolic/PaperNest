@@ -1,4 +1,6 @@
-# PaperTrail 2.0 重建计划
+# PaperNest 重建计划
+
+> 本项目原计划名"PaperTrail 2.0"，阶段 1 后正式定名 **PaperNest**。下文"现有 PaperTrail""旧系统"指 v1。
 
 ## Context（为什么重建）
 
@@ -24,7 +26,7 @@
 
 ## 目标架构
 
-**一个 Python 包 `papertrail`，四个入口共用同一服务层**：
+**一个 Python 包 `papernest`，四个入口共用同一服务层**：
 
 ```
 界面层   Web UI (React+TS+Vite)   CLI (Typer, --json)   MCP server   REST API (FastAPI, OpenAPI)
@@ -37,7 +39,7 @@
 
 要点：
 
-- **代码与数据分离**。软件装在系统里；"文献库"是用户选的一个文件夹，含 `papertrail.toml`（配置 + 库格式版本号）。升级软件不动数据；库格式变更走带自动备份的迁移。
+- **代码与数据分离**。软件装在系统里；"文献库"是用户选的一个文件夹，含 `papernest.toml`（配置 + 库格式版本号）。升级软件不动数据；库格式变更走带自动备份的迁移。
 - **六处同步消失**。真源只有 `notes/<citekey>.md`、`papers/`、`text/`。`library.bib`、`INDEX.md`、`KEYWORDS.md`、`notes-readable/` 全部变成按需导出，现有的 `rename_*`、`resolve_duplicate`、`sync_index_count`、`render_readable_notes` 和大半个 `check_library.sh` 不再需要对应物。
 - **领域内容变成库级配置**。标签词表、期刊缩写表 + 顶刊名单、表征方法词表、课题背景、查新分类规则都放进库的 `vocab/` 和 `profile.md`，软件本身不含电催化内容，别人装上即可套自己的领域。
 - **"人工判断"变成审核队列**。入库时查重、DOI 核实、SI 配对有把握的自动通过，存疑的进队列，由用户在界面里或 agent 通过 MCP 裁决。这样不再需要 Claude Code 在场。
@@ -57,7 +59,7 @@
 
 ### 旧数据迁移
 
-`papertrail migrate-legacy <旧库> <新库>`，**只复制，旧库一个字节不动**（沿用现有红线）。先出预览报告，确认后执行：
+`papernest migrate-legacy <旧库> <新库>`，**只复制，旧库一个字节不动**（沿用现有红线）。先出预览报告，确认后执行：
 
 - citekey 全部原样保留（含 5 个 `unknown-` 开头的）。
 - frontmatter 重写为合法 YAML；4 个中文键改英文（`类型→type`、`方法关键词→methods`、`表征方法→characterization`、`体系→system`），界面仍显示中文。
@@ -122,7 +124,7 @@
 1. 把本计划存为 `D:\Desktop\Reference\PaperTrail\REBUILD_PLAN.md`，供后续对话读取（旧库里只新增这一个文件）。
 2. 输出"阶段 0"的完整可复制指令，并注明用 Opus 5.5 开新对话。
 
-待你定的两个默认值（阶段 0 开始时确认即可）：新代码仓库放 `D:\Dev\papertrail`（避开桌面同步目录）；新文献库放 `D:\Desktop\Reference\PaperTrail-Library`。
+待你定的两个默认值（阶段 0 开始时确认即可）：新代码仓库放 `D:\Dev\papertrail`（避开桌面同步目录）；新文献库放 `D:\Desktop\Reference\PaperNest-Library`。
 
 ## 验证
 

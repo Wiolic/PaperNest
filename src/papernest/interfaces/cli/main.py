@@ -7,9 +7,9 @@ from typing import Annotated
 
 import typer
 
-from papertrail import __version__
+from papernest import __version__
 
-app = typer.Typer(help="PaperTrail：文献精读笔记库", no_args_is_help=True, add_completion=False)
+app = typer.Typer(help="PaperNest：文献精读笔记库", no_args_is_help=True, add_completion=False)
 
 
 @app.command()
@@ -20,7 +20,7 @@ def version(
     if as_json:
         typer.echo(json.dumps({"version": __version__}))
     else:
-        typer.echo(f"PaperTrail {__version__}")
+        typer.echo(f"PaperNest {__version__}")
 
 
 @app.command()
@@ -32,7 +32,7 @@ def serve(
     """启动本机 HTTP 服务（API 与前端）。"""
     import uvicorn
 
-    from papertrail.interfaces.api.app import create_app
+    from papernest.interfaces.api.app import create_app
 
     url = f"http://{host}:{port}"
     if not no_browser:

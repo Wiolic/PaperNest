@@ -1,6 +1,6 @@
 # 旧系统对照表
 
-本文档是 PaperTrail 2.0 重写的"旧功能 → 新模块"对照。旧系统位于 `D:\Desktop\Reference\PaperTrail`（严格只读）。内容来自对旧系统 `AGENTS.md`、`CLAUDE.md`、`scripts/` 下全部 `.py`/`.sh`（含 `scripts/ui/app.py`）的逐文件阅读，以及对旧库数据的少量只读核对（文件计数、grep）。
+本文档是 PaperNest 重写的"旧功能 → 新模块"对照。旧系统位于 `D:\Desktop\Reference\PaperTrail`（严格只读）。内容来自对旧系统 `AGENTS.md`、`CLAUDE.md`、`scripts/` 下全部 `.py`/`.sh`（含 `scripts/ui/app.py`）的逐文件阅读，以及对旧库数据的少量只读核对（文件计数、grep）。
 
 约定：
 - 引用格式为 `脚本名:函数名`；"待核实"表示读代码后仍不能确定、实现时需要实测。
@@ -19,12 +19,12 @@
 | `batch_ingest.py`（828 行） | 扫源目录 PDF，按文件夹配 SI，调 LLM 抽元数据并写七节笔记，Crossref 覆盖元数据，三层查重，生成 citekey，写 papers/notes/notes-readable/extracted-text/bib/INDEX 六处，断点续跑 | `services.ingest`、`services.dedupe`、`services.si_pairing`、`core.citekey`、`core.textsim`、`core.note_io`、`adapters.pdf_text`、`adapters.crossref`、`adapters.llm`、`services.exports` | 重写并拆分；无人值守批模式保留为 ingest 的 auto 模式，存疑项进 review 而不是只打印 | `--limit` 默认 15；`--until-done` 连续跑批；模型默认总结档，`temperature=0`、JSON 模式、`reasoning_effort="low"`；PDF 全文上限 `max_chars=200000`；strip 后文字少于 50 字符判扫描件；`is_journal_article=false` 默认跳过（`--no-skip-non-journal` 关闭）；`EXCLUDED_FOLDER_NAMES={"电镜资料"}`；排除落在 papers/notes/notes-readable/extracted-text 内的源文件；Crossref 命中后覆盖 doi/title/journal/year/authors_full；status 固定 `skimmed`；`READABLE_WIDTH=60`；每批结束汇总新建/跳过重复/非期刊/出错；SI 目标名 `<citekey>_SI<小写扩展名>` |
 | `ingest_from_meta.py` | 把 `ds.py pdf-meta` 的 JSON 直接落盘成六处文件（不做查重/DOI 核实/SI 配对） | `services.ingest` | 并入 ingest 的"落盘"步骤；不再有独立脚本（抽取结果缓存在 state，以 sha256 为 key） | citekey 已存在则拒绝；传入的 citekey 和 SI 就是最终决定；落盘顺序 PDF→SI→bib→笔记→全文缓存→INDEX（新系统改为原子事务，见第 5 节）；SI 复制并改名 `<citekey>_SI<扩展名>` |
 | `ds.py` | DeepSeek 调用原语：`chat`/`json`/`pdf-meta` 三个子命令 | `adapters.llm`、`interfaces.cli` | 重写为 `adapters.llm`（两档模型、重试、限流、输出校验）；CLI 只保留调试命令 | 默认模型 flash，`pdf-meta` 默认 pro；`temperature` 默认 0；`reasoning_effort` 默认 low（据文档 low/medium 会映射为 high，仅 high/max 真生效）；`json` 模式返回前 `json.loads` 校验；Windows 下 stdout 重配 UTF-8；缺 key 给明确报错；`pdf-meta` 读不到文字（少于 50 字符）报"可能是扫描件" |
-| `backfill_fields.py` | 一次性：给早期笔记补 `authors_full`、`表征方法`，同步 bib author 与可读版 | `papertrail.migrate` | 仅迁移时用一次 | 只读 `text[:12000]`；抽取档；客户端 `timeout=30`、`max_retries=1`；已有字段不覆盖（`already_has_field` 用 `^field:`）；bib author 用 `authors_full` 以 ` and ` 连接。迁移工具应检测缺失这两个字段的旧笔记并报告 |
+| `backfill_fields.py` | 一次性：给早期笔记补 `authors_full`、`表征方法`，同步 bib author 与可读版 | `papernest.migrate` | 仅迁移时用一次 | 只读 `text[:12000]`；抽取档；客户端 `timeout=30`、`max_retries=1`；已有字段不覆盖（`already_has_field` 用 `^field:`）；bib author 用 `authors_full` 以 ` and ` 连接。迁移工具应检测缺失这两个字段的旧笔记并报告 |
 | `map_characterization.py` | 把 `表征方法` 自由文本映射到 `vocab/characterization.yaml` 规范写法 | `services.maintenance`、`core.vocab` | 并入 maintenance（"表征方法归一化"），词表归 `core.vocab` | 纯词表查找，不调 LLM；大小写不敏感匹配规范名和 aliases；先剥离前缀 `in situ`/`operando`/`ex situ`（后接空格或连字符），查表后把前缀原样拼回，绝不合并 in situ 与 operando；词表层级 `parent` 仅供查阅，不做上位归并（EXAFS 不并入 XAS）；`--dry-run`；未映射项汇总到 `vocab/unmapped_characterization.md`（新系统改进 review/报告，不写进 frontmatter） |
 | `match_orphan_si.py` | 给跨文件夹配不上的 SI：读首页文字，LLM 识别其所属主论文标题，与库内标题相似度匹配后绑定 | `services.si_pairing`、`services.review` | 重写；≥0.85 自动绑定，0.55~0.85 进 review | `AUTO_APPLY_THRESHOLD=0.85`、`REVIEW_THRESHOLD=0.55`；只读首页（`max_pages=1,max_chars=3000`）；抽取档；弱信号配对（同文件夹仅 2 文件）也纳入待匹配；已绑定则跳过；绑定动作 = 复制为 `<citekey>_SI.<ext>`、更新 `si_files`、更新 SI 标记；默认预览，`--apply` 才写；主论文未入库时配不上属预期 |
 | `reconcile_state.py` | 用本地正则从 PDF 前 3 页抓 DOI，与 bib 比对，把已处理的源文件在 state 里标记为重复，避免白花 LLM 调用 | `services.ingest`、`core.state` | 不再需要，因为入库台账以文件 sha256 为 key，且入库前会先用本地 DOI 预查重；DOI 正则并入 `adapters.pdf_text` | DOI 正则 `\b10\.\d{4,9}/[^\s"'<>()]+`；只读前 3 页、8000 字符；去掉尾部 `.,;:`；转小写再比对；零 LLM 成本 |
 | `remove_citekeys.py` | 按 citekey 清单彻底移除：papers(含 SI)、notes、readable、全文缓存、bib 条目、INDEX 行；state 记录改 `excluded_by_user` | `services.maintenance` | 重写；删除一律进回收区 | state 里保留"用户已排除"痕迹，防止以后重跑同一来源时被当新文件重新入库；默认预览，`--apply` 才执行；执行后同步 INDEX 计数；批量删除先列清单给用户确认（红线）。旧实现用前缀 glob，见第 5 节 |
-| `rename_citekeys.py` | 一次性：旧格式 citekey（`<姓><年份>_<短标签>`）迁移到新格式，用 LLM 生成期刊简称和提炼标题 | `papertrail.migrate`、`services.maintenance` | 迁移部分仅迁移时用一次；"改名"机制并入 maintenance.rename | 旧格式判定 = 不匹配 `^[0-9]{4}-`；抽取档，输入只有标题+期刊；改名涉及 papers(含 SI)/notes/readable/bib/INDEX/state；`str.replace(old,new,1)` 改 SI 名；glob 不能对 citekey 做 `re.escape`（`-` 会被转义导致静默漏掉 SI） |
+| `rename_citekeys.py` | 一次性：旧格式 citekey（`<姓><年份>_<短标签>`）迁移到新格式，用 LLM 生成期刊简称和提炼标题 | `papernest.migrate`、`services.maintenance` | 迁移部分仅迁移时用一次；"改名"机制并入 maintenance.rename | 旧格式判定 = 不匹配 `^[0-9]{4}-`；抽取档，输入只有标题+期刊；改名涉及 papers(含 SI)/notes/readable/bib/INDEX/state；`str.replace(old,new,1)` 改 SI 名；glob 不能对 citekey 做 `re.escape`（`-` 会被转义导致静默漏掉 SI） |
 | `rename_journal_abbr.py` | 批量把 citekey 里某个期刊简称改成另一个（如 ACIE→AngewChemIntEd） | `services.maintenance`、`core.vocab` | 并入 maintenance.rename；期刊缩写改为 `core.vocab` 的映射表 | 只匹配 `^(\d{4}-)<简称>-` 位置，不误改标题片段；默认预览，`--apply` 才写；改名后需重新同步可读版；全库笔记里的旧 citekey 引用（related、`[[...]]`）要一并替换 |
 | `resolve_duplicate.py` | 合并两个确认重复的 citekey：较优字段并入 winner，删除 loser 五处记录 | `services.maintenance`、`services.dedupe` | 重写为 maintenance.merge；删除进回收区 | 合并规则：winner 的 doi 缺失且 loser 有效则取 loser；winner keywords 为空且 loser 非空则取 loser；si_files 取并集；其余字段保留 winner；默认预览，`--apply` 才执行；判重不是它的职责；单对可直接处理，5 组以上先列清单 |
 | `render_readable_notes.py` | 从 `notes/` 全量重新生成 `notes-readable/` | `services.exports` | 并入 exports（可读笔记按需导出），不再有独立真源之外的第二份目录 | 折行规则见第 3 节（60 字符、frontmatter 和标题行不折）；`newline="\n"` 写出 |
@@ -44,7 +44,7 @@
 | `word_insert_citation.py` | 通过 pywin32 连到已打开的 Word，在光标处插入编号引用并维护 References | `services.word` | 重写（仍仅 Windows+Word） | 不自己启动 Word、不开文件；多个文档必须 `--doc`；四种样式 numbered/nature/wiley/gbt7714（近似风格）；多 citekey 合并为 `[n1,n2]`；同 citekey 重复插入复用编号；`<文档名>.citemap.json`（v2：`{style, map}`，兼容旧扁平格式）；`--rebuild` 两阶段替换，见第 3 节 R11；不自动保存；Word 段落分隔符是 `\r` |
 | `word_auto_cite.py` | 扫描已打开文档全文，拆论点、检索候选、判断方向，对 support 句尾自动插引用 | `services.word`、`services.citations` | 重写 | 默认预览，`--apply` 才写；References 小节之前为正文；每句只自动插第一条 support；定位靠 Word Find 精确匹配，定位失败列出供手动补插；总结档用于拆句和判断；`--top-journals`、`--tags`、`--style` |
 | `ui/app.py`（982 行） | Streamlit 本地面板：总览/文献库/编辑资料/体检/引文献/主题综述/扩充查新/Word/命令 | `interfaces.web`、`interfaces.api` | 重写，见第 2 节 | 见第 2 节 |
-| `ui/run_hidden.vbs`、`ui/watchdog.bat`、`PaperTrail Launcher.bat` | 隐藏窗口启动 Streamlit；守护循环；双击启动器 | `interfaces.cli`、`interfaces.web` | 不再需要，因为 2.0 是正式打包的软件，由 CLI 子命令/桌面入口启动 | 仅一点值得保留：启动不留常驻命令行窗口；旧端口不一致（CLAUDE.md 写 8501，vbs 和 watchdog 用 8502） |
+| `ui/run_hidden.vbs`、`ui/watchdog.bat`、`PaperTrail Launcher.bat` | 隐藏窗口启动 Streamlit；守护循环；双击启动器 | `interfaces.cli`、`interfaces.web` | 不再需要，因为 PaperNest 是正式打包的软件，由 CLI 子命令/桌面入口启动 | 仅一点值得保留：启动不留常驻命令行窗口；旧端口不一致（CLAUDE.md 写 8501，vbs 和 watchdog 用 8502） |
 | 数据文件 `top_journals.txt`、`tag_vocab.txt`、`research_profile.md`、`vocab/characterization.yaml` | 顶刊白名单、标签受控词表、课题背景、表征方法词表 | `core.vocab`、`core.library` | 并入 vocab（词表）和库设置（课题背景）；`migrate` 导入 | `top_journals.txt` 每行一个期刊全名，必须与笔记 `journal` 字段逐字一致（旧实现不做模糊匹配，新系统用期刊映射表归一后再比对）；不含 Nature Communications/Nature Reviews 系列/Nature Protocols；`tag_vocab.txt` 缺失或为空则回退内置默认 29 个标签；`research_profile.md` 缺失时 prompt 要如实写"未配置课题背景"，不得编造 |
 | 状态文件 `.ingest_state.json`、`.performance_state.json`、`.regenerate_state.json`、`.scan_state.json`（`.local_config.json` 仅记名称，未读取） | 各脚本各自的断点/水位/本机配置 | `core.state`、`adapters.secrets` | 各状态并入 state（统一表、sha256 或 citekey 为 key）；明文密钥文件不再需要，密钥进系统凭据库 | `.ingest_state.json` 的 key 是源文件绝对路径（旧缺陷）；value 含 `status`（done/skipped_duplicate/skipped_non_journal/error/excluded_by_user）、`citekey`、`si`；迁移时只能导入"已入库"相关事实，不能导入路径 key |
 | 临时文件 `ir_pemwe_subset.txt`（50 行）、`ircox_irtaox_relevant.txt`（22 行）、`_dryrun1.txt`（107 行，UTF-16 编码的 dry-run 输出） | 一次性 citekey 清单与调试输出 | 无 | 不再需要（前两个是 citekey 清单，可由 exports 的筛选重新生成；第三个是调试输出） | 内容未逐行阅读，按用途判断，待核实 |
@@ -382,7 +382,7 @@
 - 输入："标题: ...\n\n正文摘录:" 加全文前 12000 字符。
 - 约束：只根据给定文字，不编造；找不到完整作者名单就尽量列能确定的，不要只写一人；表征方法规则同 R07。
 - 返回：`authors_full` string[]；`表征方法` string[]。
-- 迁移处理：只在 `papertrail.migrate` 里需要。
+- 迁移处理：只在 `papernest.migrate` 里需要。
 
 ### P03 重命名字段（`rename_citekeys.py:RENAME_PROMPT`）
 - 用途：旧格式 citekey 迁移时，由标题和期刊生成期刊简称与提炼标题。
@@ -498,7 +498,7 @@
 | `test_regenerate_keeps_readable_export_fresh` | 旧实现重生成后不同步 `notes-readable/`，需要另跑脚本 | 重生成后可读导出被标记过期或自动重新生成；不存在两份真源不同步的状态 | `services.regenerate` |
 | `test_rename_updates_every_location` | 旧的改名实现有三份（`rename_citekeys`、`rename_journal_abbr`、`resolve_duplicate`/`remove_citekeys`），覆盖位置不一致：前者漏 `extracted-text`；`rename_journal_abbr` 不碰状态文件；都不碰 `data/performance.csv`；`related` 字段与 `[[citekey]]` 引用处理各异 | 单一改名实现，一次事务改全：笔记（含 `related`）、papers 与 SI 与 `si_files`、全文缓存、入库台账中的 citekey、性能数据行（`citekey`、`row_id`）、其他笔记与 `topics/` 里的 `[[citekey]]`，全部同事务完成或全部回滚 | `services.maintenance` |
 | `test_rename_text_replacement_respects_citekey_boundaries` | 新发现：`rename_journal_abbr` 对全库笔记 `text.replace(old_ck, new_ck)`，`old_ck` 是 `X` 时会把 `X-2` 里的子串一并改写 | 引用替换只匹配完整 citekey（边界为非 citekey 字符），`X-2` 不受影响 | `services.maintenance` |
-| `test_bib_nested_braces_and_entry_types` | 旧 bib 正则 `\{([^}]*)\}` 遇嵌套花括号（`{Ir}O$_2$`、`{DFT}`）截断，且只认 `@article` | 导入旧 bib 的解析器正确处理嵌套花括号、`@inproceedings`/`@book`/`@misc` 等类型、字段换行、引号定界值 | `papertrail.migrate` |
+| `test_bib_nested_braces_and_entry_types` | 旧 bib 正则 `\{([^}]*)\}` 遇嵌套花括号（`{Ir}O$_2$`、`{DFT}`）截断，且只认 `@article` | 导入旧 bib 的解析器正确处理嵌套花括号、`@inproceedings`/`@book`/`@misc` 等类型、字段换行、引号定界值 | `papernest.migrate` |
 | `test_bib_export_roundtrip_with_braces` | 导出 bib 时标题含 `{`、`}`、`&`、`%`、`_`、`$` | 导出的 bib 能被标准 BibTeX 解析器读回，保大小写用的花括号保留，特殊字符正确转义 | `services.exports` |
 | `test_list_fields_with_commas_roundtrip` | 列表字段按逗号切分（`build_keyword_index.sh`、`map_characterization.py:parse_list_line`、`resolve_duplicate`、`ui/app.py:_fm_list_field`），`[Ir(III), Ru(IV) oxide]`、`"Smith, Jr."` 一类值被切坏 | 列表字段是真正的 YAML 序列，含逗号、引号、冒号、方括号的值往返不变；迁移时旧的内联数组被正确还原 | `core.note_io` |
 | `test_author_names_not_split_by_last_word` | 作者姓名一律"最后一个词当姓"（`export_for_endnote:to_ris`、`word_insert_citation:_surname_initials`），`van der Waals`、`de la Cruz`、`Jr.`、单名、中文姓名都被切错 | 作者以结构化 given/family 保存（Crossref 提供的优先），RIS 与引用样式按结构化字段输出；无结构化来源时保留原文序列化，不猜姓 | `core.models`、`services.exports` |
@@ -506,7 +506,7 @@
 | `test_concurrent_writes_no_lost_update` | 旧系统无锁无事务，多进程（面板 + 命令行）同时追加 `library.bib`、改 `INDEX.md`、写状态文件会丢更新 | 并发写同一库不丢更新：文件锁 + 原子写；两个任务同时入库两篇，两篇都在 | `core.library`、`core.state` |
 | `test_state_write_is_atomic` | 新发现：各 `save_state` 直接 `write_text`，进程在写到一半被杀会留下损坏的 JSON，之后整条流水线崩溃 | 写入先落临时文件再原子替换；崩溃后状态要么是旧版要么是新版 | `core.state`、`core.library` |
 | `test_notes_written_with_lf_only` | 部分脚本 `write_text` 不带 `newline="\n"`（`resolve_duplicate`、`regenerate_notes`、`rename_journal_abbr`、`find_citations`），在 Windows 写出 CRLF，与其他脚本写的 LF 混用，diff 噪声大，bash/正则工具行为不一 | 所有文本一律 UTF-8 + LF 写出；读取时容忍 CRLF | `core.note_io`、`core.library` |
-| `test_frontmatter_values_with_colon_roundtrip` | 旧笔记写 frontmatter 时值不加引号（`batch_ingest:note_content`），标题或体系含 `: ` 时严格 YAML 解析失败（任务说明记为 406 篇里 71 篇；旧库 title 含 `: ` 的有 48 篇） | 写出的 frontmatter 一律能被严格 YAML 解析并往返；`migrate` 能修复旧笔记并报告修复条数，对 406 篇实测零解析失败 | `core.note_io`、`papertrail.migrate` |
+| `test_frontmatter_values_with_colon_roundtrip` | 旧笔记写 frontmatter 时值不加引号（`batch_ingest:note_content`），标题或体系含 `: ` 时严格 YAML 解析失败（任务说明记为 406 篇里 71 篇；旧库 title 含 `: ` 的有 48 篇） | 写出的 frontmatter 一律能被严格 YAML 解析并往返；`migrate` 能修复旧笔记并报告修复条数，对 406 篇实测零解析失败 | `core.note_io`、`papernest.migrate` |
 | `test_empty_field_does_not_swallow_newline` | 用 `\s*` 的正则在空值字段（`rating:`）上吞换行，取到下一行内容（`map_characterization.FRONTMATTER_LIST_RE` 仍留 `\s*`；`backfill_fields`、`rename_citekeys` 的 `title:\s*(.*)$` 同样有隐患） | 空值字段读成空，不串行；解析统一走 YAML 库而非正则 | `core.note_io` |
 | `test_word_auto_cite_parses_structured_verdicts` | `word_auto_cite` 用 `CITATION_LINE_RE` 解析 LLM 的 Markdown 列表；标题里含 `[`、`*`、换行，或模型多输出一行就解析丢失 | LLM 判断以 JSON 返回并按 schema 校验；解析失败重试，不是静默当作无 support | `services.citations`、`services.word` |
 | `test_word_locate_sentence_over_255_chars` | Word `Find` 对超过约 255 字符的文本定位失败；`locate_sentence` 没有长度保护，长句被静默跳过 | 长句分段（取句首与句尾锚点）或改用字符偏移定位，仍能找到并在句尾插入 | `services.word` |

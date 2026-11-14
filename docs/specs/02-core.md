@@ -2,7 +2,7 @@
 
 执行档位：Sonnet（测试样例库可派 Haiku 子代理生成）。前置阅读：`docs/DATA_MODEL.md` 全文、`docs/ARCHITECTURE.md` 第 4、6、9 节、`docs/LEGACY_MAP.md` 第 3、5 节。
 
-目标：`papertrail.core` 全部模块 + `services.doctor` + 最小的只读 CLI。完成后可以对一个符合 v1 格式的库做打开、校验、索引、检索。
+目标：`papernest.core` 全部模块 + `services.doctor` + 最小的只读 CLI。完成后可以对一个符合 v1 格式的库做打开、校验、索引、检索。
 
 核心层不触网、不调 LLM。所有公开函数带类型标注。
 
@@ -20,7 +20,7 @@ pydantic v2 模型，全部 `model_config = ConfigDict(extra="forbid")`。
 - `Note`：`paper: Paper`、`sections: list[Section]`。方法 `section(id) -> str`、`body_markdown() -> str`。
 - `Attachment`：`path: Path`、`kind: Literal["main","si"]`。
 - `PerformanceRow`：DATA_MODEL 第 6 节的列；数值列 `float | None`。
-- `LibraryConfig`：`papertrail.toml` 的全部段，带 DATA_MODEL 第 2 节所示默认值。
+- `LibraryConfig`：`papernest.toml` 的全部段，带 DATA_MODEL 第 2 节所示默认值。
 
 ## 2. core/note_io.py
 
@@ -43,7 +43,7 @@ class Library:
     root: Path
     config: LibraryConfig
     @classmethod
-    def open(cls, root: Path) -> "Library"        # 无 papertrail.toml → library_not_found；版本过新 → library_format_too_new
+    def open(cls, root: Path) -> "Library"        # 无 papernest.toml → library_not_found；版本过新 → library_format_too_new
     @classmethod
     def create(cls, root: Path, name: str) -> "Library"   # 建目录骨架、默认配置、空词表
     def note_path(self, citekey) -> Path
@@ -54,7 +54,7 @@ class Library:
     def list_citekeys(self) -> list[str]          # 以 notes/*.md 为准，排序
     def write_lock(self, timeout=30) -> ContextManager     # filelock，超时抛 locked
     def atomic_write(self, path: Path, data: str | bytes) -> None
-    def trash(self, paths: list[Path], operation: str) -> Path   # 移入 .papertrail/trash/<时间戳>-<operation>/，保留相对路径，返回回收目录
+    def trash(self, paths: list[Path], operation: str) -> Path   # 移入 .papernest/trash/<时间戳>-<operation>/，保留相对路径，返回回收目录
     def restore(self, trash_dir: Path) -> list[Path]
 ```
 
@@ -152,7 +152,7 @@ def check(ctx) -> DoctorReport
 
 ## 10. CLI（只读部分）
 
-`papertrail library init <路径> --name`、`library info`、`paper list`（映射 SearchQuery 的参数）、`paper show <citekey>`、`index rebuild`、`doctor`。全部支持 `--json` 与 `--library`。
+`papernest library init <路径> --name`、`library info`、`paper list`（映射 SearchQuery 的参数）、`paper show <citekey>`、`index rebuild`、`doctor`。全部支持 `--json` 与 `--library`。
 
 `ServiceContext` 在 `services/context.py` 定义并由 CLI 构造；本阶段适配器字段全部为 None。
 
@@ -167,10 +167,10 @@ def check(ctx) -> DoctorReport
 ## 12. 验收清单
 
 ```
-uv run pytest --cov=papertrail.core --cov-fail-under=90    通过
+uv run pytest --cov=papernest.core --cov-fail-under=90    通过
 uv run ruff check . && uv run pyright                       无报错
-uv run papertrail --library tests/fixtures/library_small doctor --json    输出合法 JSON，且恰好报出样例库里预埋的问题
-uv run papertrail --library tests/fixtures/library_small paper list --text <某关键词> --json    命中预期条目
+uv run papernest --library tests/fixtures/library_small doctor --json    输出合法 JSON，且恰好报出样例库里预埋的问题
+uv run papernest --library tests/fixtures/library_small paper list --text <某关键词> --json    命中预期条目
 ```
 
 预计需要 2–3 个会话。建议切分：① models + note_io + library；② vocab + textsim + citekey + index；③ state + doctor + CLI。每段结束都按 `CLAUDE.md` 收尾。

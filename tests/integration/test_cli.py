@@ -2,8 +2,8 @@ import json
 
 from typer.testing import CliRunner
 
-from papertrail import __version__
-from papertrail.interfaces.cli.main import app
+from papernest import __version__
+from papernest.interfaces.cli.main import app
 
 runner = CliRunner()
 

@@ -12,8 +12,8 @@
 ## 1. 命令
 
 ```
-papertrail migrate-legacy <旧库> <新库> [--apply] [--report <路径>] [--json]
-papertrail migrate-legacy --verify <旧库> <新库> [--json]
+papernest migrate-legacy <旧库> <新库> [--apply] [--report <路径>] [--json]
+papernest migrate-legacy --verify <旧库> <新库> [--json]
 ```
 
 - 不带 `--apply`：只分析，输出报告，不写新库。
@@ -21,14 +21,14 @@ papertrail migrate-legacy --verify <旧库> <新库> [--json]
 
 ## 2. 模块
 
-`src/papertrail/migrate/`：
+`src/papernest/migrate/`：
 
 - `legacy_parse.py`：旧格式的容错解析（旧 frontmatter 不是合法 YAML，不能用 yaml 整体解析）。
 - `legacy.py`：`analyze(old) -> MigrationPlan`、`apply(plan, new) -> None`。
 - `report.py`：把 `MigrationPlan` 渲染成 Markdown 与 JSON。
 - `verify.py`：`verify(old, new) -> VerifyReport`。
 
-只依赖 `papertrail.core`。不触网、不调 LLM。
+只依赖 `papernest.core`。不触网、不调 LLM。
 
 ## 3. 旧 frontmatter 解析规则
 
@@ -47,7 +47,7 @@ papertrail migrate-legacy --verify <旧库> <新库> [--json]
 | `year` | 整数；`unknown`、空 → null |
 | `journal` | `unknown`、空 → null |
 | `doi` | 占位值集合（见 LEGACY_MAP 第 3 节，至少含 `N/A`、`NA`、`unknown`、`none`、空，不区分大小写）→ null；其余走模型的归一化 |
-| `volume` `issue` `pages` | null（阶段 4 提供 `papertrail paper enrich` 从 Crossref 补齐） |
+| `volume` `issue` `pages` | null（阶段 4 提供 `papernest paper enrich` 从 Crossref 补齐） |
 | `entry_type` | `article` |
 | `type` | 计算→`computational`；实验→`experimental`；计算+实验、实验+计算→`combined`；综述→`review`；其他值 → null 并记入警告 |
 | `tags` `keywords` `related` `si_files` | 原样（去首尾空格、去空项、保序去重） |
@@ -124,10 +124,10 @@ papertrail migrate-legacy --verify <旧库> <新库> [--json]
 
 ## 11. 在真实库上执行（Haiku 会话）
 
-1. `papertrail migrate-legacy "D:\Desktop\Reference\PaperTrail" <新库> --report <仓库外的临时路径>`，把报告的第 2、5 节贴给用户。
+1. `papernest migrate-legacy "D:\Desktop\Reference\PaperTrail" <新库> --report <仓库外的临时路径>`，把报告的第 2、5 节贴给用户。
 2. 有阻断级问题：停下，交回执行档修工具，不要手改数据。
 3. 无阻断：经用户同意后加 `--apply`。预期数字：笔记 406、`papers/` 文件 434（其中 SI 28）、全文缓存 406、性能数据 1047 行、综述 3。
-4. 跑 `papertrail --library <新库> doctor`，把结果摘要贴给用户。
+4. 跑 `papernest --library <新库> doctor`，把结果摘要贴给用户。
 5. 真实库的报告和数据**不进 git**。
 
 ## 12. 验收关口（架构档）

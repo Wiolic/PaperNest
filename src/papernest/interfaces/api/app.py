@@ -6,8 +6,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from papertrail import __version__
-from papertrail.core.errors import ErrorCode, PaperTrailError
+from papernest import __version__
+from papernest.core.errors import ErrorCode, PaperNestError
 
 WEB_DIST = Path(__file__).resolve().parents[2] / "web_dist"
 
@@ -27,7 +27,7 @@ _STATUS: dict[str, int] = {
 
 
 async def _handle_error(_: Request, exc: Exception) -> JSONResponse:
-    assert isinstance(exc, PaperTrailError)
+    assert isinstance(exc, PaperNestError)
     return JSONResponse(
         status_code=_STATUS.get(exc.code, 500),
         content={"error": {"code": exc.code, "message": exc.message, "details": exc.details}},
@@ -35,8 +35,8 @@ async def _handle_error(_: Request, exc: Exception) -> JSONResponse:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="PaperTrail", version=__version__)
-    app.add_exception_handler(PaperTrailError, _handle_error)
+    app = FastAPI(title="PaperNest", version=__version__)
+    app.add_exception_handler(PaperNestError, _handle_error)
 
     @app.get("/api/v1/health")
     def health() -> dict[str, str]:
